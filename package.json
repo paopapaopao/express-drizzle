@@ -15,7 +15,12 @@
   },
   "scripts": {
     "start": "node src/server.ts",
-    "dev": "node --env-file-if-exists=.env --watch src/server.ts"
+    "dev": "node --env-file-if-exists=.env --watch src/server.ts",
+    "typecheck": "tsc",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
+    "db:push": "drizzle-kit push",
+    "db:studio": "drizzle-kit studio"
   },
   "type": "module"
 }
