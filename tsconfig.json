@@ -1,0 +1,11 @@
+{
+  // TODO: Check for unnecessary fields
+  "compilerOptions": {
+    "module": "nodenext",
+    "rewriteRelativeImportExtensions": true,
+    "erasableSyntaxOnly": true,
+    "verbatimModuleSyntax": true,
+    "noEmit": true,
+    "skipLibCheck": true
+  }
+}
