@@ -1,0 +1,7 @@
+permissions:
+  drizzle-kit:
+    skills: true
+
+skills:
+  dirs:
+    - .claude/skills
