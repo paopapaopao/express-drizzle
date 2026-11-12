@@ -2,16 +2,25 @@
   "name": "express-drizzle",
   "version": "0.0.0",
   "dependencies": {
-    "express": "^5.3.0"
+    "drizzle-orm": "1.0.0-rc.5",
+    "express": "^5.3.0",
+    "pg": "^8.23.1"
   },
   "devDependencies": {
     "@types/express": "^5.0.6",
     "@types/node": "^26.6.6",
+    "@types/pg": "^8.23.1",
+    "drizzle-kit": "1.0.0-rc.5",
     "typescript": "^7.0.2"
   },
   "scripts": {
     "start": "node src/server.ts",
-    "dev": "node --watch src/server.ts"
+    "dev": "node --env-file-if-exists=.env --watch src/server.ts",
+    "typecheck": "tsc",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
+    "db:push": "drizzle-kit push",
+    "db:studio": "drizzle-kit studio"
   },
   "type": "module"
 }
