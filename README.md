@@ -29,7 +29,7 @@ pnpm db:seed
 pnpm dev
 ```
 
-The server runs at http://localhost:3000.
+The server runs at http://localhost:4000.
 
 ## Scripts
 

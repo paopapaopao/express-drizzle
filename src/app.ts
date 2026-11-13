@@ -1,6 +1,6 @@
 import express, { type Response } from 'express';
 
-import recipesRouter from './routes/recipes.ts';
+import { recipesRouter } from './routers/index.ts';
 
 const app = express();
 
