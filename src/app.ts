@@ -4,6 +4,8 @@ import recipesRouter from './routes/recipes.ts';
 
 const app = express();
 
+app.use(express.json());
+
 app.get('/', (_, res: Response) => {
   res.send('express-drizzle');
 });
