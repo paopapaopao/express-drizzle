@@ -48,15 +48,26 @@ Node strips types without checking them, so run `pnpm typecheck` to catch type e
 
 ## API
 
-| Method   | Path           | Description                    |
-| -------- | -------------- | ------------------------------ |
-| `GET`    | `/recipes`     | List all recipes               |
-| `GET`    | `/recipes/:id` | Get one recipe                 |
-| `POST`   | `/recipes`     | Create a recipe (`201`)        |
-| `PATCH`  | `/recipes/:id` | Update some fields of a recipe |
-| `DELETE` | `/recipes/:id` | Delete a recipe (`204`)        |
+| Method   | Path           | Description                     |
+| -------- | -------------- | ------------------------------- |
+| `GET`    | `/recipes`     | List recipes (see paging below) |
+| `GET`    | `/recipes/:id` | Get one recipe                  |
+| `POST`   | `/recipes`     | Create a recipe (`201`)         |
+| `PATCH`  | `/recipes/:id` | Update some fields of a recipe  |
+| `DELETE` | `/recipes/:id` | Delete a recipe (`204`)         |
 
 Request bodies are JSON and are validated against the table definition. Invalid input returns `400` with the problem fields; a missing recipe returns `404`.
+
+### Paging
+
+`GET /recipes` with no query returns every recipe as an array. Pass `limit` and/or `cursor` to get one page at a time, sorted by id:
+
+```
+GET /recipes?limit=20             → { "items": [ …20 recipes ], "nextCursor": 20 }
+GET /recipes?limit=20&cursor=20   → recipes with id > 20
+```
+
+`limit` is 1–100 (default 20). Pass the returned `nextCursor` as `cursor` to get the next page; it is `null` on the last page.
 
 ## Database workflow
 

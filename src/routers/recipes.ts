@@ -1,4 +1,4 @@
-import { asc, eq } from 'drizzle-orm';
+import { asc, eq, gt } from 'drizzle-orm';
 import { createInsertSchema, createUpdateSchema } from 'drizzle-orm/zod';
 import { type Request, type Response, Router } from 'express';
 import { z } from 'zod';
@@ -34,9 +34,49 @@ const parseId = (raw: string): number | null => {
   return /^\d+$/.test(raw) && id >= 1 && id <= MAX_INT ? id : null;
 };
 
-router.get('/', async (_, res) => {
-  const recipes = await db.select().from(recipesTable).orderBy(asc(recipesTable.id));
-  res.json(recipes);
+const DEFAULT_PAGE_SIZE = 20;
+const MAX_PAGE_SIZE = 100;
+
+const listQuerySchema = z.object({
+  limit: z.coerce.number().int().min(1).max(MAX_PAGE_SIZE).optional(),
+  // Id of the last recipe already received; the page starts after it
+  cursor: z.coerce.number().int().min(0).max(MAX_INT).optional(),
+});
+
+router.get('/', async (req, res) => {
+  const result = listQuerySchema.safeParse(req.query);
+
+  if (!result.success) {
+    res
+      .status(400)
+      .json({ message: 'Invalid query', errors: z.flattenError(result.error).fieldErrors });
+
+    return;
+  }
+
+  const { limit, cursor } = result.data;
+
+  // Without pagination params, keep returning every recipe as a plain array for older clients
+  if (limit === undefined && cursor === undefined) {
+    const recipes = await db.select().from(recipesTable).orderBy(asc(recipesTable.id));
+    res.json(recipes);
+
+    return;
+  }
+
+  const pageSize = limit ?? DEFAULT_PAGE_SIZE;
+  // Fetch one extra row to know whether another page exists
+  const rows = await db
+    .select()
+    .from(recipesTable)
+    .where(cursor === undefined ? undefined : gt(recipesTable.id, cursor))
+    .orderBy(asc(recipesTable.id))
+    .limit(pageSize + 1);
+
+  const items = rows.slice(0, pageSize);
+  const nextCursor = rows.length > pageSize ? items[items.length - 1].id : null;
+
+  res.json({ items, nextCursor });
 });
 
 router.get('/:id', async (req: Request<{ id: string }>, res: Response) => {
