@@ -1,10 +1,11 @@
-import { asc, eq, gt } from 'drizzle-orm';
+import { and, asc, eq, gt } from 'drizzle-orm';
 import { createInsertSchema, createUpdateSchema } from 'drizzle-orm/zod';
 import { type Request, type Response, Router } from 'express';
 import { z } from 'zod';
 
 import { db } from '../db/index.ts';
 import { recipesTable } from '../db/schema.ts';
+import { DEFAULT_PAGE_SIZE, listQuerySchema, MAX_INT, searchFilter } from './recipe-search.ts';
 
 const router = Router();
 
@@ -24,9 +25,6 @@ const omitTimestamps = { createdAt: true, updatedAt: true } as const;
 const createRecipeSchema = createInsertSchema(recipesTable, refinements).omit(omitTimestamps);
 const updateRecipeSchema = createUpdateSchema(recipesTable, refinements).omit(omitTimestamps);
 
-// Largest value a Postgres `integer` column can hold
-const MAX_INT = 2_147_483_647;
-
 // Returns the id as a number, or null if it isn't a valid recipe id
 const parseId = (raw: string): number | null => {
   const id = Number(raw);
@@ -34,42 +32,40 @@ const parseId = (raw: string): number | null => {
   return /^\d+$/.test(raw) && id >= 1 && id <= MAX_INT ? id : null;
 };
 
-const DEFAULT_PAGE_SIZE = 20;
-const MAX_PAGE_SIZE = 100;
-
-const listQuerySchema = z.object({
-  limit: z.coerce.number().int().min(1).max(MAX_PAGE_SIZE).optional(),
-  // Id of the last recipe already received; the page starts after it
-  cursor: z.coerce.number().int().min(0).max(MAX_INT).optional(),
-});
-
 router.get('/', async (req, res) => {
-  const result = listQuerySchema.safeParse(req.query);
-
-  if (!result.success) {
-    res
-      .status(400)
-      .json({ message: 'Invalid query', errors: z.flattenError(result.error).fieldErrors });
-
-    return;
-  }
-
-  const { limit, cursor } = result.data;
-
-  // Without pagination params, keep returning every recipe as a plain array for older clients
-  if (limit === undefined && cursor === undefined) {
+  // With no query at all, keep returning every recipe as a plain array for older clients
+  if (Object.keys(req.query).length === 0) {
     const recipes = await db.select().from(recipesTable).orderBy(asc(recipesTable.id));
     res.json(recipes);
 
     return;
   }
 
+  const result = listQuerySchema.safeParse(req.query);
+
+  if (!result.success) {
+    const { formErrors, fieldErrors } = z.flattenError(result.error);
+    res.status(400).json({
+      // Unknown parameters end up in formErrors, e.g. "Unrecognized key: \"ingredient\""
+      message: formErrors[0] ?? 'Invalid query',
+      errors: fieldErrors,
+    });
+
+    return;
+  }
+
+  const { limit, cursor } = result.data;
   const pageSize = limit ?? DEFAULT_PAGE_SIZE;
   // Fetch one extra row to know whether another page exists
   const rows = await db
     .select()
     .from(recipesTable)
-    .where(cursor === undefined ? undefined : gt(recipesTable.id, cursor))
+    .where(
+      and(
+        cursor === undefined ? undefined : gt(recipesTable.id, cursor),
+        searchFilter(result.data),
+      ),
+    )
     .orderBy(asc(recipesTable.id))
     .limit(pageSize + 1);
 
